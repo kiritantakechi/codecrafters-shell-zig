@@ -9,11 +9,13 @@ var stdout_writer = std.fs.File.stdout().writerStreaming(&stdout_buffer);
 const stdout = &stdout_writer.interface;
 
 pub fn main() !void {
-    try stdout.print("$ ", .{});
-    try stdout.flush();
+    while (true) {
+        try stdout.print("$ ", .{});
+        try stdout.flush();
 
-    const command = try stdin.takeDelimiter('\n');
+        const command = try stdin.takeDelimiter('\n');
 
-    try stdout.print("{s}: command not found\n", .{command.?});
-    try stdout.flush();
+        try stdout.print("{s}: command not found\n", .{command.?});
+        try stdout.flush();
+    }
 }
