@@ -1,21 +1,40 @@
 const std = @import("std");
 
-var stdin_buffer: [4096]u8 = undefined;
-var stdin_reader = std.fs.File.stdin().readerStreaming(&stdin_buffer);
-const stdin = &stdin_reader.interface;
-
-var stdout_buffer: [4096]u8 = undefined;
-var stdout_writer = std.fs.File.stdout().writerStreaming(&stdout_buffer);
-const stdout = &stdout_writer.interface;
+const Allocator = std.mem.Allocator;
+const Lexer = @import("lexer.zig").Lexer;
+const Token = @import("lexer.zig").Token;
+const Parser = @import("parser.zig").Parser;
+const Executor = @import("executor.zig").Executor;
 
 pub fn main() !void {
+    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+    defer std.debug.assert(debug_allocator.deinit() == .ok);
+
+    const gpa = debug_allocator.allocator();
+
+    var stdin_buffer: [4096]u8 = undefined;
+    var stdin_reader = std.fs.File.stdin().readerStreaming(&stdin_buffer);
+    const stdin = &stdin_reader.interface;
+
+    var stdout_buffer: [4096]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writerStreaming(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
+
     while (true) {
         try stdout.print("$ ", .{});
         try stdout.flush();
 
-        const command = try stdin.takeDelimiter('\n');
+        const input = (try stdin.takeDelimiter('\n')).?;
 
-        try stdout.print("{s}: command not found\n", .{command.?});
-        try stdout.flush();
+        // try stdout.print("{s}: command not found\n", .{input});
+        // try stdout.flush();
+
+        var lexer = Lexer.init(gpa);
+        const tokens = try lexer.scan(input);
+
+        var parser = Parser.init(gpa);
+        const actions = try parser.parse(tokens);
+
+        Executor.exec(actions);
     }
 }
