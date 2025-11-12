@@ -26,48 +26,49 @@ pub const Parser = struct {
             .eof => {
                 try actions.append(self.allocator, .none);
 
-                i += 1;
-                break :parse actions.toOwnedSlice(self.allocator);
+                break :parse try actions.toOwnedSlice(self.allocator);
             },
             .exit => {
-                const result = try parseExit(tokens[i..]);
-                try actions.append(self.allocator, result.@"1");
+                const result = try self.parseExit(tokens[i + 1 ..]);
+                try actions.appendSlice(self.allocator, result.@"1");
 
                 i = 0;
+                if (i >= result.@"0".len) break :parse try actions.toOwnedSlice(self.allocator);
                 continue :parse result.@"0"[i];
             },
             else => {
-                if (i >= tokens.len) break :parse actions.toOwnedSlice(self.allocator);
+                if (i >= tokens.len) break :parse try actions.toOwnedSlice(self.allocator);
                 break :parse error.UnknownCommand;
             },
         };
     }
 
-    fn parseExit(tokens: []const Token) !struct { []const Token, Action } {
-        var action: Action = .none;
+    fn parseExit(self: *Parser, tokens: []const Token) !struct { []const Token, []const Action } {
+        var actions: std.ArrayList(Action) = try .initCapacity(self.allocator, 64);
+        errdefer actions.deinit(self.allocator);
 
         var i: usize = 0;
         return parse: switch (tokens[i]) {
             .eof => {
-                action = .none;
+                try actions.append(self.allocator, .none);
 
                 i += 1;
-                break :parse .{ tokens[i..], action };
+                break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
             },
             .chain => {
-                action = .none;
+                try actions.append(self.allocator, .none);
 
                 i += 1;
-                break :parse .{ tokens[i..], action };
+                break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
             },
             .digit => |token| {
-                action = .{ .exit = @intCast(token) };
+                try actions.append(self.allocator, .{ .exit = @intCast(token) });
 
                 i += 1;
                 continue :parse tokens[i];
             },
             else => {
-                if (i >= tokens.len) break :parse .{ tokens[i..], action };
+                if (i >= tokens.len) break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
                 break :parse error.InvalidArgument;
             },
         };

@@ -40,8 +40,8 @@ pub const Lexer = struct {
             current_input = result.@"0";
         }
 
-        try tokens.append(self.allocator, .{ .eof = {} });
-        return tokens.toOwnedSlice(self.allocator);
+        try tokens.append(self.allocator, .eof);
+        return try tokens.toOwnedSlice(self.allocator);
     }
 
     fn scanSpace(input: []const u8) []const u8 {
