@@ -34,7 +34,6 @@ pub fn main() !void {
                 else => try stdout.print("unknown error\n", .{}),
             }
 
-            try stdout.flush();
             continue;
         };
 
@@ -45,10 +44,9 @@ pub fn main() !void {
                 else => try stdout.print("unknown error\n", .{}),
             }
 
-            try stdout.flush();
             continue;
         };
 
-        Executor.exec(actions);
+        try Executor.exec(stdout, actions);
     }
 }

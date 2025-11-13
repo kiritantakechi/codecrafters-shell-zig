@@ -6,6 +6,7 @@ pub const Token = union(enum) {
     bareword: []const u8,
     chain: void,
     digit: usize,
+    space: []const u8,
     eof: void,
 };
 
