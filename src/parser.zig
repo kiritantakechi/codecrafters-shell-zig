@@ -17,7 +17,7 @@ pub const Parser = struct {
         };
     }
 
-    pub fn parse(self: *Parser, tokens: []const Token) ![]const Action {
+    pub fn parse(self: *Parser, tokens: []const Token, diag: ?*[]const u8) ![]const Action {
         var actions: std.ArrayList(Action) = try .initCapacity(self.allocator, 64);
         errdefer actions.deinit(self.allocator);
 
@@ -29,21 +29,23 @@ pub const Parser = struct {
                 break :parse try actions.toOwnedSlice(self.allocator);
             },
             .exit => {
-                const tuple = try self.parseExit(tokens[i + 1 ..]);
+                const tuple = try self.parseExit(tokens[i + 1 ..], diag);
                 try actions.appendSlice(self.allocator, tuple.@"1");
 
                 i = 0;
                 if (i >= tuple.@"0".len) break :parse try actions.toOwnedSlice(self.allocator);
                 continue :parse tuple.@"0"[i];
             },
-            else => {
+            else => |token| {
                 if (i >= tokens.len) break :parse try actions.toOwnedSlice(self.allocator);
+
+                if (diag) |d| d.* = @tagName(token);
                 break :parse error.UnknownCommand;
             },
         };
     }
 
-    fn parseExit(self: *Parser, tokens: []const Token) !struct { []const Token, []const Action } {
+    fn parseExit(self: *Parser, tokens: []const Token, diag: ?*[]const u8) !struct { []const Token, []const Action } {
         var actions: std.ArrayList(Action) = try .initCapacity(self.allocator, 64);
         errdefer actions.deinit(self.allocator);
 
@@ -70,8 +72,10 @@ pub const Parser = struct {
                 i += 1;
                 continue :parse tokens[i];
             },
-            else => {
+            else => |token| {
                 if (i >= tokens.len) break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+
+                if (diag) |d| d.* = @tagName(token);
                 break :parse error.InvalidArgument;
             },
         };

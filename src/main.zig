@@ -20,6 +20,8 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writerStreaming(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
+    var error_buffer: []const u8 = undefined;
+
     while (true) {
         try stdout.print("$ ", .{});
         try stdout.flush();
@@ -30,10 +32,10 @@ pub fn main() !void {
         // try stdout.flush();
 
         var lexer = Lexer.init(gpa);
-        const tokens = try lexer.scan(input);
+        const tokens = try lexer.scan(input, &error_buffer);
 
         var parser = Parser.init(gpa);
-        const actions = try parser.parse(tokens);
+        const actions = try parser.parse(tokens, &error_buffer);
 
         Executor.exec(actions);
     }

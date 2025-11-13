@@ -19,7 +19,7 @@ pub const Lexer = struct {
         };
     }
 
-    pub fn scan(self: *Lexer, input: []const u8) ![]const Token {
+    pub fn scan(self: *Lexer, input: []const u8, diag: ?*[]const u8) ![]const Token {
         var tokens: std.ArrayList(Token) = try .initCapacity(self.allocator, 64);
         errdefer tokens.deinit(self.allocator);
 
@@ -29,11 +29,11 @@ pub const Lexer = struct {
             if (current_input.len == 0) break;
 
             const tuple = switch (current_input[0]) {
-                '0'...'9' => try scanDigit(current_input),
-                '"' => try scanLiteral(current_input),
-                'a'...'z', 'A'...'Z' => try scanKeyword(current_input),
+                '0'...'9' => try scanDigit(current_input, diag),
+                '"' => try scanLiteral(current_input, diag),
+                'a'...'z', 'A'...'Z' => try scanKeyword(current_input, diag),
                 else => {
-                    std.debug.print("Unknown character: {c}\n", .{current_input[0]});
+                    if (diag) |d| d.* = current_input[0..1];
                     return error.UnknownCharacter;
                 },
             };
@@ -59,13 +59,14 @@ pub const Lexer = struct {
         };
     }
 
-    fn scanLiteral(input: []const u8) !struct { []const u8, Token } { // 递归解析改进
+    fn scanLiteral(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } { // 递归解析改进
         var i: usize = 1;
         while (i < input.len and input[i] != '"') {
             i += 1;
         }
 
         if (i >= input.len) {
+            if (diag) |d| d.* = input[0..i];
             return error.UnterminatedString;
         }
 
@@ -77,13 +78,17 @@ pub const Lexer = struct {
         };
     }
 
-    fn scanDigit(input: []const u8) !struct { []const u8, Token } {
+    fn scanDigit(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
         while (i < input.len and std.ascii.isDigit(input[i])) {
             i += 1;
         }
 
-        const value = try std.fmt.parseUnsigned(usize, input[0..i], 10);
+        const value = std.fmt.parseUnsigned(usize, input[0..i], 10) catch {
+            if (diag) |d| d.* = input[0..i];
+            return error.InvalidDigit;
+        };
+
         const token: Token = .{ .digit = value };
 
         return .{
@@ -92,7 +97,7 @@ pub const Lexer = struct {
         };
     }
 
-    fn scanKeyword(input: []const u8) !struct { []const u8, Token } {
+    fn scanKeyword(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
         while (i < input.len and (std.ascii.isAlphanumeric(input[i]) or input[i] == '_')) {
             i += 1;
@@ -105,7 +110,7 @@ pub const Lexer = struct {
         else if (std.mem.eql(u8, keyword_slice, "&&"))
             .{ .chain = {} }
         else {
-            std.debug.print("Unknown keyword: {s}\n", .{keyword_slice});
+            if (diag) |d| d.* = keyword_slice;
             return error.UnknownKeyword;
         };
 
