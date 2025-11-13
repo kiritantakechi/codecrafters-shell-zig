@@ -6,6 +6,7 @@ pub const Token = union(enum) {
     chain: void,
     digit: usize,
     exit: void,
+    literal: []const u8,
     eof: void,
 };
 
@@ -27,8 +28,9 @@ pub const Lexer = struct {
             current_input = scanSpace(current_input);
             if (current_input.len == 0) break;
 
-            const result = switch (current_input[0]) {
+            const tuple = switch (current_input[0]) {
                 '0'...'9' => try scanDigit(current_input),
+                '"' => try scanLiteral(current_input),
                 'a'...'z', 'A'...'Z' => try scanKeyword(current_input),
                 else => {
                     std.debug.print("Unknown character: {c}\n", .{current_input[0]});
@@ -36,8 +38,8 @@ pub const Lexer = struct {
                 },
             };
 
-            try tokens.append(self.allocator, result.@"1");
-            current_input = result.@"0";
+            try tokens.append(self.allocator, tuple.@"1");
+            current_input = tuple.@"0";
         }
 
         try tokens.append(self.allocator, .eof);
@@ -54,6 +56,24 @@ pub const Lexer = struct {
                 break :scan input[i..];
             },
             else => break :scan input[i..],
+        };
+    }
+
+    fn scanLiteral(input: []const u8) !struct { []const u8, Token } { // 递归解析改进
+        var i: usize = 1;
+        while (i < input.len and input[i] != '"') {
+            i += 1;
+        }
+
+        if (i >= input.len) {
+            return error.UnterminatedString;
+        }
+
+        const token: Token = .{ .literal = input[1..i] };
+
+        return .{
+            input[i + 1 ..],
+            token,
         };
     }
 

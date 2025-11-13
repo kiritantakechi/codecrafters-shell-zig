@@ -29,12 +29,12 @@ pub const Parser = struct {
                 break :parse try actions.toOwnedSlice(self.allocator);
             },
             .exit => {
-                const result = try self.parseExit(tokens[i + 1 ..]);
-                try actions.appendSlice(self.allocator, result.@"1");
+                const tuple = try self.parseExit(tokens[i + 1 ..]);
+                try actions.appendSlice(self.allocator, tuple.@"1");
 
                 i = 0;
-                if (i >= result.@"0".len) break :parse try actions.toOwnedSlice(self.allocator);
-                continue :parse result.@"0"[i];
+                if (i >= tuple.@"0".len) break :parse try actions.toOwnedSlice(self.allocator);
+                continue :parse tuple.@"0"[i];
             },
             else => {
                 if (i >= tokens.len) break :parse try actions.toOwnedSlice(self.allocator);
@@ -50,6 +50,9 @@ pub const Parser = struct {
         var i: usize = 0;
         return parse: switch (tokens[i]) {
             .eof => {
+                // if (i < 1) break :parse error.InsuffArgument;
+                if (i < 1) try actions.append(self.allocator, .{ .exit = 0 });
+
                 try actions.append(self.allocator, .none);
 
                 i += 1;
