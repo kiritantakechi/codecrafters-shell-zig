@@ -28,9 +28,6 @@ pub fn main() !void {
 
         const input = (try stdin.takeDelimiter('\n')).?;
 
-        // try stdout.print("{s}: command not found\n", .{input});
-        // try stdout.flush();
-
         var lexer = Lexer.init(gpa);
         const tokens = lexer.scan(input, &error_buffer) catch |err| {
             switch (err) {
