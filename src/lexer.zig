@@ -3,10 +3,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 pub const Token = union(enum) {
+    bareword: []const u8,
     chain: void,
     digit: usize,
-    exit: void,
-    literal: []const u8,
     eof: void,
 };
 
@@ -29,9 +28,9 @@ pub const Lexer = struct {
             if (current_input.len == 0) break;
 
             const tuple = switch (current_input[0]) {
+                '&' => try scanOperator(current_input, diag),
                 '0'...'9' => try scanDigit(current_input, diag),
-                '"' => try scanLiteral(current_input, diag),
-                'a'...'z', 'A'...'Z' => try scanKeyword(current_input, diag),
+                'a'...'z', 'A'...'Z' => try scanBareword(current_input, diag),
                 else => {
                     if (diag) |d| d.* = current_input[0..1];
                     return error.UnknownCharacter;
@@ -49,43 +48,73 @@ pub const Lexer = struct {
     fn scanSpace(input: []const u8) []const u8 {
         var i: usize = 0;
         return scan: switch (input[i]) {
-            ' ', '\t', '\n', '\r' => if (i < input.len) {
+            ' ', '\t', '\n', '\r' => {
+                if (i >= input.len) break :scan input[i..];
+
                 i += 1;
                 continue :scan input[i];
-            } else {
-                break :scan input[i..];
             },
             else => break :scan input[i..],
         };
     }
 
-    fn scanLiteral(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } { // 递归解析改进
-        var i: usize = 1;
-        while (i < input.len and input[i] != '"') {
-            i += 1;
-        }
+    fn scanOperator(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
+        var i: usize = 0;
+        while (i < input.len and !isSpace(input[i])) : (i += 1) {}
 
-        if (i >= input.len) {
-            if (diag) |d| d.* = input[0..i];
-            return error.UnterminatedString;
-        }
+        const operator_slice = input[0..i];
 
-        const token: Token = .{ .literal = input[1..i] };
+        const token: Token = if (std.mem.eql(u8, operator_slice, "&&"))
+            .chain
+        else {
+            if (diag) |d| d.* = operator_slice;
+            return error.UnknownOperator;
+        };
 
         return .{
-            input[i + 1 ..],
+            input[i..],
+            token,
+        };
+    }
+
+    fn scanBareword(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
+        var i: usize = 0;
+        var flag: bool = false;
+        while (i < input.len and !isSpace(input[i])) : (i += 1) {
+            if (!(std.ascii.isAlphanumeric(input[i]) or input[i] == '_')) flag = true;
+        }
+
+        const bareword_slice = input[0..i];
+
+        if (flag) {
+            if (diag) |d| d.* = bareword_slice;
+            return error.InvalidBareword;
+        }
+
+        const token: Token = .{ .bareword = bareword_slice };
+
+        return .{
+            input[i..],
             token,
         };
     }
 
     fn scanDigit(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
-        while (i < input.len and std.ascii.isDigit(input[i])) {
-            i += 1;
+        var flag: bool = false;
+        while (i < input.len and !isSpace(input[i])) : (i += 1) {
+            if (!(std.ascii.isDigit(input[i]))) flag = true;
         }
 
-        const value = std.fmt.parseUnsigned(usize, input[0..i], 10) catch {
-            if (diag) |d| d.* = input[0..i];
+        const digit_slice = input[0..i];
+
+        if (flag) {
+            if (diag) |d| d.* = digit_slice;
+            return error.InvalidDigit;
+        }
+
+        const value = std.fmt.parseUnsigned(usize, digit_slice, 10) catch {
+            if (diag) |d| d.* = digit_slice;
             return error.InvalidDigit;
         };
 
@@ -97,26 +126,10 @@ pub const Lexer = struct {
         };
     }
 
-    fn scanKeyword(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
-        var i: usize = 0;
-        while (i < input.len and (std.ascii.isAlphanumeric(input[i]) or input[i] == '_')) {
-            i += 1;
-        }
-
-        const keyword_slice = input[0..i];
-
-        const token: Token = if (std.mem.eql(u8, keyword_slice, "exit"))
-            .{ .exit = {} }
-        else if (std.mem.eql(u8, keyword_slice, "&&"))
-            .{ .chain = {} }
-        else {
-            if (diag) |d| d.* = keyword_slice;
-            return error.UnknownKeyword;
-        };
-
-        return .{
-            input[i..],
-            token,
+    fn isSpace(ch: u8) bool {
+        return switch (ch) {
+            ' ', '\t', '\n', '\r' => true,
+            else => false,
         };
     }
 };
