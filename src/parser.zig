@@ -29,6 +29,10 @@ pub const Parser = struct {
 
                 break :parse try actions.toOwnedSlice(self.allocator);
             },
+            .space => {
+                i += 1;
+                continue :parse tokens[i];
+            },
             .bareword => |word| {
                 const tuple = try self.parseBareword(tokens[i + 1 ..], word, diag);
                 try actions.appendSlice(self.allocator, tuple.@"1");
@@ -68,6 +72,12 @@ pub const Parser = struct {
 
                 i += 1;
                 break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+            },
+            .space => |space| {
+                if (i > 1) try actions.append(self.allocator, .{ .echo = space });
+
+                i += 1;
+                continue :parse tokens[i];
             },
             .chain => {
                 try actions.append(self.allocator, .none);
@@ -110,6 +120,10 @@ pub const Parser = struct {
 
                 i += 1;
                 break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+            },
+            .space => {
+                i += 1;
+                continue :parse tokens[i];
             },
             .chain => {
                 try actions.append(self.allocator, .none);

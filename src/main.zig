@@ -31,7 +31,7 @@ pub fn main() !void {
         var lexer = Lexer.init(gpa);
         const tokens = lexer.scan(input, &error_buffer) catch |err| {
             switch (err) {
-                else => try stdout.print("unknown error\n", .{}),
+                else => try stdout.print("lexer: unknown error\n", .{}),
             }
 
             continue;
@@ -41,7 +41,7 @@ pub fn main() !void {
         const actions = parser.parse(tokens, &error_buffer) catch |err| {
             switch (err) {
                 error.InvalidCommand => try stdout.print("{s}: command not found\n", .{error_buffer}),
-                else => try stdout.print("unknown error\n", .{}),
+                else => try stdout.print("parser: unknown error\n", .{}),
             }
 
             continue;
