@@ -40,7 +40,7 @@ pub const Parser = struct {
                 if (i >= tokens.len) break :parse try actions.toOwnedSlice(self.allocator);
 
                 if (diag) |d| d.* = @tagName(token);
-                break :parse error.UnknownCommand;
+                break :parse error.InvalidCommand;
             },
         };
     }
