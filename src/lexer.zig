@@ -28,7 +28,7 @@ pub const Lexer = struct {
         while (current_input.len > 0) {
             if (current_input.len == 0) break;
 
-            const scan_tuple = switch (current_input[0]) {
+            const tuple = switch (current_input[0]) {
                 ' ', '\t', '\n', '\r' => scanSpace(current_input),
                 '&' => try scanOperator(current_input, diag),
                 '0'...'9' => try scanDigit(current_input, diag),
@@ -39,8 +39,8 @@ pub const Lexer = struct {
                 },
             };
 
-            try tokens.append(self.allocator, scan_tuple.@"1");
-            current_input = scan_tuple.@"0";
+            try tokens.append(self.allocator, tuple.@"1");
+            current_input = tuple.@"0";
         }
 
         try tokens.append(self.allocator, .eof);
