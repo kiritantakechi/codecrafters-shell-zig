@@ -17,12 +17,6 @@ pub const CommandType = union(enum) {
 
 const BuiltinSet = std.StaticStringMap(void);
 
-const set = BuiltinSet.initComptime(.{
-    .{ "echo", {} },
-    .{ "exit", {} },
-    .{ "type", {} },
-});
-
 pub const Parser = struct {
     allocator: Allocator,
 
@@ -204,5 +198,30 @@ pub const Parser = struct {
 };
 
 fn isBuiltin(input: []const u8) bool {
+    const builtin_entries = comptime blk: {
+        const fields = std.meta.fields(Action);
+
+        var count: usize = 0;
+        for (fields) |field| {
+            if (!std.mem.eql(u8, field.name, "none")) {
+                count += 1;
+            }
+        }
+
+        var entries: [count]struct { []const u8, void } = undefined;
+
+        var i: usize = 0;
+        for (fields) |field| {
+            if (!std.mem.eql(u8, field.name, "none")) {
+                entries[i] = .{ field.name, {} };
+                i += 1;
+            }
+        }
+
+        break :blk entries;
+    };
+
+    const set = BuiltinSet.initComptime(builtin_entries);
+
     return set.has(input);
 }
