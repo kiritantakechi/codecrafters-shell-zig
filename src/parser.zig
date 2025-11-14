@@ -114,7 +114,7 @@ pub const Parser = struct {
         var i: usize = 0;
         return parse: switch (tokens[i]) {
             .eof => {
-                if (i < 1) try actions.append(self.allocator, .{ .exit = 0 });
+                if (i < 2) try actions.append(self.allocator, .{ .exit = 0 });
 
                 try actions.append(self.allocator, .none);
 

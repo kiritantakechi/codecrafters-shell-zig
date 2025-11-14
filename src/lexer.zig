@@ -26,14 +26,10 @@ pub const Lexer = struct {
 
         var current_input = input;
         while (current_input.len > 0) {
-            const space_tuple = scanSpace(current_input);
-
-            try tokens.append(self.allocator, space_tuple.@"1");
-            current_input = space_tuple.@"0";
-
             if (current_input.len == 0) break;
 
             const scan_tuple = switch (current_input[0]) {
+                ' ', '\t', '\n', '\r' => scanSpace(current_input),
                 '&' => try scanOperator(current_input, diag),
                 '0'...'9' => try scanDigit(current_input, diag),
                 'a'...'z', 'A'...'Z' => try scanBareword(current_input, diag),
@@ -55,9 +51,9 @@ pub const Lexer = struct {
         var i: usize = 0;
         return scan: switch (input[i]) {
             ' ', '\t', '\n', '\r' => {
-                if (i >= input.len - 1) break :scan .{ input[i..], .{ .space = input[0..i] } };
-
                 i += 1;
+
+                if (i >= input.len) break :scan .{ input[i..], .{ .space = input[0..i] } };
                 continue :scan input[i];
             },
             else => break :scan .{ input[i..], .{ .space = input[0..i] } },
