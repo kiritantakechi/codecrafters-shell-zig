@@ -127,11 +127,11 @@ pub const Lexer = struct {
             token,
         };
     }
-
-    fn isSpace(ch: u8) bool {
-        return switch (ch) {
-            ' ', '\t', '\n', '\r' => true,
-            else => false,
-        };
-    }
 };
+
+fn isSpace(ch: u8) bool {
+    return switch (ch) {
+        ' ', '\t', '\n', '\r' => true,
+        else => false,
+    };
+}

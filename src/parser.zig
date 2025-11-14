@@ -6,8 +6,22 @@ const Token = @import("lexer.zig").Token;
 pub const Action = union(enum) {
     echo: []const u8,
     exit: u8,
+    type: CommandType,
     none: void,
 };
+
+pub const CommandType = union(enum) {
+    builtin: []const u8,
+    builtout: []const u8,
+};
+
+const BuiltinSet = std.StaticStringMap(void);
+
+const set = BuiltinSet.initComptime(.{
+    .{ "echo", {} },
+    .{ "exit", {} },
+    .{ "type", {} },
+});
 
 pub const Parser = struct {
     allocator: Allocator,
@@ -55,6 +69,8 @@ pub const Parser = struct {
             try self.parseEcho(tokens[0..], diag)
         else if (std.mem.eql(u8, word, "exit"))
             try self.parseExit(tokens[0..], diag)
+        else if (std.mem.eql(u8, word, "type"))
+            try self.parseType(tokens[0..], diag)
         else {
             if (diag) |d| d.* = word;
             return error.InvalidCommand;
@@ -145,4 +161,48 @@ pub const Parser = struct {
             },
         };
     }
+
+    fn parseType(self: *Parser, tokens: []const Token, diag: ?*[]const u8) !struct { []const Token, []const Action } {
+        var actions: std.ArrayList(Action) = try .initCapacity(self.allocator, 64);
+        errdefer actions.deinit(self.allocator);
+
+        var i: usize = 0;
+        return parse: switch (tokens[i]) {
+            .eof => {
+                try actions.append(self.allocator, .none);
+
+                i += 1;
+                break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+            },
+            .space => {
+                i += 1;
+                continue :parse tokens[i];
+            },
+            .chain => {
+                try actions.append(self.allocator, .none);
+
+                i += 1;
+                break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+            },
+            .bareword => |word| {
+                if (isBuiltin(word))
+                    try actions.append(self.allocator, .{ .type = .{ .builtin = word } })
+                else
+                    try actions.append(self.allocator, .{ .type = .{ .builtout = word } });
+
+                i += 1;
+                continue :parse tokens[i];
+            },
+            else => |token| {
+                if (i >= tokens.len) break :parse .{ tokens[i..], try actions.toOwnedSlice(self.allocator) };
+
+                if (diag) |d| d.* = @tagName(token);
+                break :parse error.InvalidArgument;
+            },
+        };
+    }
 };
+
+fn isBuiltin(input: []const u8) bool {
+    return set.has(input);
+}

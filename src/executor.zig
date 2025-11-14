@@ -8,15 +8,29 @@ pub const Executor = struct {
     pub fn exec(writer: *Writer, actions: []const Action) !void {
         var i: usize = 0;
         return exec: switch (actions[i]) {
-            .echo => |action| {
-                try writer.print("{s}", .{action});
+            .echo => |text| {
+                try writer.print("{s}", .{text});
 
                 i += 1;
                 if (i >= actions.len) break :exec;
                 continue :exec actions[i];
             },
-            .exit => |action| {
-                std.process.exit(action);
+            .exit => |digit| {
+                std.process.exit(digit);
+
+                i += 1;
+                if (i >= actions.len) break :exec;
+                continue :exec actions[i];
+            },
+            .type => |typ| {
+                switch (typ) {
+                    .builtin => |cmd| {
+                        try writer.print("{s} is a shell builtin\n", .{cmd});
+                    },
+                    .builtout => |cmd| {
+                        try writer.print("{s}: not found\n", .{cmd});
+                    },
+                }
 
                 i += 1;
                 if (i >= actions.len) break :exec;
