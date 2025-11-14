@@ -12,10 +12,9 @@ pub const Action = union(enum) {
 
 pub const CommandType = union(enum) {
     builtin: []const u8,
-    builtout: []const u8,
+    builtout: struct { []const u8, []const u8 },
+    not_found: []const u8,
 };
-
-const BuiltinSet = std.StaticStringMap(void);
 
 pub const Parser = struct {
     allocator: Allocator,
@@ -182,7 +181,7 @@ pub const Parser = struct {
                 if (isBuiltin(word))
                     try actions.append(self.allocator, .{ .type = .{ .builtin = word } })
                 else
-                    try actions.append(self.allocator, .{ .type = .{ .builtout = word } });
+                    try actions.append(self.allocator, .{ .type = .{ .not_found = word } });
 
                 i += 1;
                 continue :parse tokens[i];
@@ -196,6 +195,8 @@ pub const Parser = struct {
         };
     }
 };
+
+const BuiltinSet = std.StaticStringMap(void);
 
 fn isBuiltin(input: []const u8) bool {
     const builtin_entries = comptime blk: {

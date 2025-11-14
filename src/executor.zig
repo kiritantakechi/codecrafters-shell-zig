@@ -28,6 +28,9 @@ pub const Executor = struct {
                         try writer.print("{s} is a shell builtin\n", .{cmd});
                     },
                     .builtout => |cmd| {
+                        try writer.print("{s} is {s}\n", .{ cmd.@"0", cmd.@"1" });
+                    },
+                    .not_found => |cmd| {
                         try writer.print("{s}: not found\n", .{cmd});
                     },
                 }

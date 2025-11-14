@@ -2,6 +2,8 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
+const Utility = @import("utility.zig").Utility;
+
 pub const Token = union(enum) {
     bareword: []const u8,
     chain: void,
@@ -62,7 +64,7 @@ pub const Lexer = struct {
 
     fn scanOperator(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
-        while (i < input.len and !isSpace(input[i])) : (i += 1) {}
+        while (i < input.len and !Utility.isSpace(input[i])) : (i += 1) {}
 
         const operator_slice = input[0..i];
 
@@ -82,7 +84,7 @@ pub const Lexer = struct {
     fn scanBareword(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
         var flag: bool = false;
-        while (i < input.len and !isSpace(input[i])) : (i += 1) {
+        while (i < input.len and !Utility.isSpace(input[i])) : (i += 1) {
             if (!(std.ascii.isAlphanumeric(input[i]) or input[i] == '_')) flag = true;
         }
 
@@ -104,7 +106,7 @@ pub const Lexer = struct {
     fn scanDigit(input: []const u8, diag: ?*[]const u8) !struct { []const u8, Token } {
         var i: usize = 0;
         var flag: bool = false;
-        while (i < input.len and !isSpace(input[i])) : (i += 1) {
+        while (i < input.len and !Utility.isSpace(input[i])) : (i += 1) {
             if (!(std.ascii.isDigit(input[i]))) flag = true;
         }
 
@@ -128,10 +130,3 @@ pub const Lexer = struct {
         };
     }
 };
-
-fn isSpace(ch: u8) bool {
-    return switch (ch) {
-        ' ', '\t', '\n', '\r' => true,
-        else => false,
-    };
-}
