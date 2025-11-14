@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const Allocator = std.mem.Allocator;
-
 const Utility = @import("utility.zig").Utility;
 
 pub const Token = union(enum) {

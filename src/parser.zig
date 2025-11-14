@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 const Token = @import("lexer.zig").Token;
+const Utility = @import("utility.zig").Utility;
 
 pub const Action = union(enum) {
     echo: []const u8,
@@ -180,7 +181,9 @@ pub const Parser = struct {
             .bareword => |word| {
                 if (isBuiltin(word))
                     try actions.append(self.allocator, .{ .type = .{ .builtin = word } })
-                else
+                else if (Utility.findExe(self.allocator, word)) |path|
+                    try actions.append(self.allocator, .{ .type = .{ .builtout = .{ word, path } } })
+                else |_|
                     try actions.append(self.allocator, .{ .type = .{ .not_found = word } });
 
                 i += 1;
